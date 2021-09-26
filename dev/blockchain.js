@@ -8,7 +8,7 @@ function Blockchain() {
   this.currentNodeUrl = currentNodeUrl;
   this.networkNodes = [];
 
-  this.createNewBlock(100, '1', '1');
+  this.createNewBlock(100, '0', '0');
 }
 
 Blockchain.prototype.createNewBlock = function (nonce, previousBlockHash, hash) {
@@ -69,12 +69,12 @@ Blockchain.prototype.chainIsValid = function (blockchain) {
     const blockHash = this.hashBlock(
       prevBlock['hash'],
       {
-        transactions: currentBlock['transactions'],
+        transactions: currentBlock['transaction'],
         index: currentBlock['index'],
       },
       currentBlock['nonce']
     );
-    if (blockHash.substring(0, 4) !== '0000') {
+    if (blockHash !== currentBlock['hash']) {
       validChain = false;
     }
     if (currentBlock['previousBlockHash'] !== prevBlock['hash']) {
@@ -82,14 +82,56 @@ Blockchain.prototype.chainIsValid = function (blockchain) {
     }
   }
   const genesisBlock = blockchain[0];
-  const correctNonce = genesisBlock['nonce'] === '100';
-  const correctPreviousHash = genesisBlock['previousBlockHash'] === '1';
-  const correctHash = genesisBlock['hash'] === '1';
-  const correctTransactions = genesisBlock['transactions'].length === 0;
-  if (correctNonce || correctPreviousHash || correctHash || correctTransactions) {
+  const correctNonce = genesisBlock['nonce'] === 100;
+  const correctPreviousHash = genesisBlock['previousBlockHash'] === '0';
+  const correctHash = genesisBlock['hash'] === '0';
+  const correctTransactions = genesisBlock['transaction'].length === 0;
+  if (!correctNonce || !correctPreviousHash || !correctHash || !correctTransactions) {
     validChain = false;
   }
   return validChain;
+};
+
+Blockchain.prototype.getBlock = function (blockHash) {
+  let correctBlock = null;
+  this.chain.forEach((block) => {
+    if (block.hash === blockHash) {
+      correctBlock = block;
+    }
+  });
+  return correctBlock;
+};
+Blockchain.prototype.getTransaction = function (transactionId) {
+  let correctTransactions = null;
+  let correctBlock = null;
+  this.chain.forEach((block) => {
+    block.transaction.forEach((transaction) => {
+      if (transaction.transactionId === transactionId) {
+        correctTransactions = transaction;
+        correctBlock = block;
+      }
+    });
+  });
+  return { transaction: correctTransactions, block: correctBlock };
+};
+Blockchain.prototype.getAddress = function (address) {
+  let addressTransactions = [];
+  this.chain.forEach((block) => {
+    block.transaction.forEach((transaction) => {
+      if (transaction.sender === address || transaction.recipient === address) {
+        addressTransactions.push(transaction);
+      }
+    });
+  });
+  let balance = 0;
+  addressTransactions.forEach((transaction) => {
+    if (transaction.sender === address) {
+      balance -= transaction;
+    } else if (transaction.recipient === address) {
+      balance += transaction;
+    }
+  });
+  return { addressTransactions: addressTransactions, addressBalance: balance };
 };
 
 module.exports = Blockchain;
